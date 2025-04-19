@@ -4,7 +4,6 @@ namespace Bastiaigner\LaravelXentral;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use Bastiaigner\LaravelXentral\Commands\LaravelXentralCommand;
 
 class LaravelXentralServiceProvider extends PackageServiceProvider
 {
