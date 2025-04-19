@@ -2,9 +2,7 @@
 
 namespace Bastiaigner\LaravelXentral\Tests;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Bastiaigner\LaravelXentral\LaravelXentralServiceProvider;
 
 class TestCase extends Orchestra
 {
@@ -16,12 +14,6 @@ class TestCase extends Orchestra
     protected function getPackageProviders($app)
     {
         return [
-            LaravelXentralServiceProvider::class,
         ];
-    }
-
-    public function getEnvironmentSetUp($app)
-    {
-        return parent::getEnvironmentSetUp($app);
     }
 }

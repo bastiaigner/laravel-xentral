@@ -63,10 +63,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Bastiaigner\\LaravelXentral\\LaravelXentralServiceProvider"
             ],
             "aliases": {
-                "LaravelXentral": "Bastiaigner\\LaravelXentral\\Facades\\LaravelXentral"
             }
         }
     },
