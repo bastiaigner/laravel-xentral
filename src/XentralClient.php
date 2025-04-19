@@ -82,7 +82,7 @@ final class XentralClient extends PendingRequest
         return $results;
     }
 
-    public function filter(string $field, int|string|array $value, FilterOperator $operator = FilterOperator::Equals): self
+    public function filter(string $field, int|string|array $value, string|FilterOperator $operator = FilterOperator::Equals): self
     {
         // We need the following format: ?filter[0][key]=companyName&filter[0][op]=startsWith&filter[0][value]=X
 
@@ -94,7 +94,7 @@ final class XentralClient extends PendingRequest
 
             $this->withQueryParameters([
                 $filterKey => $field,
-                $filterOpKey => $operator->value,
+                $filterOpKey => $operator instanceof FilterOperator ? $operator->value : $operator,
                 $filterValueKey => is_array($value) ? implode(',', $value) : $value,
             ]);
             $this->filterCount++;
