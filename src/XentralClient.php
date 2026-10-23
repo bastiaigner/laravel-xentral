@@ -6,6 +6,8 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\LazyCollection;
 
 final class XentralClient extends PendingRequest
 {
@@ -33,11 +35,20 @@ final class XentralClient extends PendingRequest
             ->withToken($token)
             ->throw()
             ->retry(
-                times: 5,
+                times: 6,
                 sleepMilliseconds: function ($attempt, $exception) {
 
                     if ($exception instanceof RequestException) {
                         if ($exception->response->status() == 429 || $exception->response->status() >= 500) {
+                            Log::warning(
+                                'Xentral API request failed with status code {status} on attempt {attempt}. Retrying in {delay}ms.',
+                                [
+                                    'status' => $exception->response->status(),
+                                    'attempt' => $attempt,
+                                    'delay' => pow(2, $attempt) * 1000,
+                                ]
+                            );
+
                             return pow(2, $attempt) * 1000; // exponential backoff in milliseconds
                         }
                     }
@@ -80,6 +91,34 @@ final class XentralClient extends PendingRequest
         } while (($pageNumber - 1) * $pageSize < $totalCount);
 
         return $results;
+    }
+
+    /**
+     * Lazily iterate over all items of a v3 endpoint using cursor pagination.
+     * Only one page is held in memory at a time.
+     */
+    public function lazy(string $endpoint, array $params = [], int $perPage = 500): LazyCollection
+    {
+        return LazyCollection::make(function () use ($endpoint, $params, $perPage) {
+            $cursor = null;
+
+            do {
+                $json = (clone $this)
+                    ->withHeaders(['X-Pagination' => 'cursor'])
+                    ->get($endpoint, array_merge($params, array_filter([
+                        'perPage' => $perPage,
+                        'cursor' => $cursor,
+                    ])))
+                    ->json();
+
+                // Plain yield (not yield from) so keys keep incrementing across pages
+                foreach (data_get($json, 'data', []) as $item) {
+                    yield $item;
+                }
+
+                $cursor = data_get($json, 'meta.nextCursor');
+            } while ($cursor);
+        });
     }
 
     public function filter(string $field, int|string|array $value, string|FilterOperator $operator = FilterOperator::Equals): self
