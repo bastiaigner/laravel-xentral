@@ -3,11 +3,12 @@
 use Bastiaigner\LaravelXentral\FilterOperator;
 use Bastiaigner\LaravelXentral\XentralClient;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 test('it throws an exception if no base URL is specified', function () {
     XentralClient::make()->get('api/v1/products');
-})->throws(\InvalidArgumentException::class, 'Base URL and token must be provided.');
+})->throws(InvalidArgumentException::class, 'Base URL and token must be provided.');
 
 test('it uses the correct base URL', function () {
 
@@ -161,7 +162,7 @@ test('it throws exception on 4XX errors', function () {
         'https://example.com/api/v1/products' => Http::response([], 400),
     ]);
 
-    $this->expectException(\Illuminate\Http\Client\RequestException::class);
+    $this->expectException(RequestException::class);
 
     XentralClient::make('https://example.com', 'foo')->get('api/v1/products');
 });
