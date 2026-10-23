@@ -3,11 +3,12 @@
 use Bastiaigner\LaravelXentral\FilterOperator;
 use Bastiaigner\LaravelXentral\XentralClient;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 test('it throws an exception if no base URL is specified', function () {
     XentralClient::make()->get('api/v1/products');
-})->throws(\InvalidArgumentException::class, 'Base URL and token must be provided.');
+})->throws(InvalidArgumentException::class, 'Base URL and token must be provided.');
 
 test('it uses the correct base URL', function () {
 
@@ -161,7 +162,31 @@ test('it throws exception on 4XX errors', function () {
         'https://example.com/api/v1/products' => Http::response([], 400),
     ]);
 
-    $this->expectException(\Illuminate\Http\Client\RequestException::class);
+    $this->expectException(RequestException::class);
 
     XentralClient::make('https://example.com', 'foo')->get('api/v1/products');
+});
+
+test('it lazily iterates over all items using cursor pagination', function () {
+    Http::preventStrayRequests();
+    Http::fake([
+        'https://example.com/api/v3/products*' => function (Request $request) {
+            expect($request->header('X-Pagination'))->toBe(['cursor'])
+                ->and(urldecode($request->url()))->toContain('filter[0][key]=isDisabled');
+
+            return match ($request->data()['cursor'] ?? null) {
+                null => Http::response(['data' => [['id' => 1], ['id' => 2]], 'meta' => ['nextCursor' => 'abc']]),
+                'abc' => Http::response(['data' => [['id' => 3]], 'meta' => ['nextCursor' => null]]),
+            };
+        },
+    ]);
+
+    $items = XentralClient::make('https://example.com', 'foo')
+        ->filter('isDisabled', 'false')
+        ->lazy('api/v3/products', ['include' => 'parts'], perPage: 2);
+
+    Http::assertSentCount(0); // nothing fetched until iterated
+
+    expect($items->pluck('id')->all())->toBe([1, 2, 3]);
+    Http::assertSentCount(2);
 });
